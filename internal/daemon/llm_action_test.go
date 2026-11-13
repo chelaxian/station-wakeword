@@ -16,7 +16,7 @@ func TestLLMActionWritesRouteMarker(t *testing.T) {
 	d.settings.RouteMarker = marker
 	d.mu.Unlock()
 	listened := make(chan bool, 1)
-	d.startListen = func() error {
+	d.startListen = func(string) error {
 		b, err := os.ReadFile(marker)
 		listened <- err == nil && string(b) == "llm\n"
 		return nil
@@ -32,7 +32,7 @@ func TestLLMActionWritesRouteMarker(t *testing.T) {
 	}
 
 	d.settings.RouteMarker = filepath.Join(t.TempDir(), "missing", "route")
-	d.startListen = func() error { t.Error("started listening without a marker"); return nil }
+	d.startListen = func(string) error { t.Error("started listening without a marker"); return nil }
 	h := &Hit{Word: "w"}
 	d.fireActions(h, []string{actLLM})
 	time.Sleep(200 * time.Millisecond)
@@ -59,7 +59,7 @@ func TestHomeActionMarksBeforeListening(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "route")
 	d.settings.RouteMarker = marker
 	listened := make(chan bool, 1)
-	d.startListen = func() error {
+	d.startListen = func(string) error {
 		b, err := os.ReadFile(marker)
 		listened <- err == nil && string(b) == "home\n"
 		return nil

@@ -108,7 +108,7 @@ func (d *Daemon) fireActions(h *Hit, actions []string) {
 					d.setHitError(h, err.Error())
 					return
 				}
-				if err := d.startListen(); err != nil {
+				if err := d.startListen(""); err != nil {
 					os.Remove(marker)
 					log.Printf("action llm: %v", err)
 					d.setHitError(h, err.Error())
