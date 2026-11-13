@@ -24,11 +24,12 @@ import (
 const (
 	actAlice   = "alice"   // ask Alice to listen (stock behaviour)
 	actLLM     = "llm"     // like alice, but mark the request for the local bridge's LLM
+	actHome    = "home"    // wake the station and route to Home Assistant
 	actWebhook = "webhook" // POST settings.on_hit_url
 	actExec    = "exec"    // run settings.on_hit_exec
 )
 
-var knownActions = map[string]bool{actAlice: true, actLLM: true, actWebhook: true, actExec: true}
+var knownActions = map[string]bool{actAlice: true, actLLM: true, actHome: true, actWebhook: true, actExec: true}
 
 // defaultRouteMarker is the file a local bridge (for example Quasar Bridge in
 // hybrid mode) reads to learn that the next voice request came from a custom
@@ -70,7 +71,7 @@ func (d *Daemon) actionsFor(id string) []string {
 		if !knownActions[a] || seen[a] {
 			continue
 		}
-		if (a == actAlice || a == actLLM) && d.settings.DryRun {
+		if (a == actAlice || a == actLLM || a == actHome) && d.settings.DryRun {
 			continue // dry run: never wake Alice
 		}
 		if a == actWebhook && d.settings.OnHitURL == "" {
@@ -93,12 +94,12 @@ func (d *Daemon) fireActions(h *Hit, actions []string) {
 
 	for _, a := range actions {
 		switch a {
-		case actLLM:
-			go func() {
+		case actLLM, actHome:
+			go func(route string) {
 				marker := d.routeMarker()
 				// Do not start a conversation if marking failed: the request
 				// would silently go to Yandex instead of the LLM.
-				if err := os.WriteFile(marker, []byte("llm\n"), 0600); err != nil {
+				if err := os.WriteFile(marker, []byte(route+"\n"), 0600); err != nil {
 					log.Printf("action llm marker: %v", err)
 					d.setHitError(h, err.Error())
 					return
@@ -108,7 +109,7 @@ func (d *Daemon) fireActions(h *Hit, actions []string) {
 					log.Printf("action llm: %v", err)
 					d.setHitError(h, err.Error())
 				}
-			}()
+			}(a)
 		case actAlice:
 			go func() {
 				if err := d.startListen(); err != nil {

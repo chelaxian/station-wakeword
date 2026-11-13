@@ -299,6 +299,9 @@ func (d *Daemon) trainWord(name string, en kws.Enrollment) (*kws.Model, error) {
 	if d.settings.Words[id] == nil {
 		d.settings.Words[id] = &WordSettings{Enabled: true}
 	}
+	if id == "умный-дом" {
+		d.settings.Words[id].Actions = []string{actHome}
+	}
 	d.saveSettings()
 	d.mu.Unlock()
 	return m, d.loadWords()

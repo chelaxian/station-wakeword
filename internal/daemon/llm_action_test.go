@@ -53,3 +53,22 @@ func TestLLMActionRespectsDryRun(t *testing.T) {
 		t.Fatalf("dry run kept %v", got)
 	}
 }
+
+func TestHomeActionMarksBeforeListening(t *testing.T) {
+	d := newTestDaemon(t)
+	marker := filepath.Join(t.TempDir(), "route")
+	d.settings.RouteMarker = marker
+	listened := make(chan bool, 1)
+	d.startListen = func() error {
+		b, err := os.ReadFile(marker)
+		listened <- err == nil && string(b) == "home\n"
+		return nil
+	}
+	d.fireActions(&Hit{Word: "умный-дом"}, []string{actHome})
+	select {
+	case ok := <-listened:
+		if !ok { t.Fatal("home marker missing before listening") }
+	case <-time.After(2*time.Second):
+		t.Fatal("home did not start listening")
+	}
+}
