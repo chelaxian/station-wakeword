@@ -43,6 +43,8 @@ type Settings struct {
 	CountdownSecs int                      `json:"countdown_secs,omitempty"` // delay before each UI recording; default 3
 	Beeps         bool                     `json:"beeps,omitempty"`          // station beeps when a recording starts and ends
 	Words         map[string]*WordSettings `json:"words"`
+
+	TagAliceWakeword bool `json:"tag_alice_wakeword,omitzero"`
 }
 
 type WordSettings struct {
@@ -73,7 +75,7 @@ type Daemon struct {
 	opt         Options
 	audioPort   int
 	alicedPort  int
-	startListen func() error
+	startListen func(word string) error
 
 	mu       sync.Mutex
 	settings Settings
@@ -133,7 +135,7 @@ func New(opt Options) (*Daemon, error) {
 	}
 	d := &Daemon{opt: opt, ring: newRing(ringSecs * kws.SampleRate)}
 	d.audioPort, d.alicedPort = quasar.Ports(opt.QuasarCfg)
-	d.startListen = func() error { return quasar.CallAlice(d.alicedPort, quasar.StartConversation) }
+	d.startListen = func(word string) error { return quasar.CallAlice(d.alicedPort, quasar.StartConversation, word) }
 	d.settings = Settings{Channel: "vqe_0", Gain: 32, Words: map[string]*WordSettings{}}
 	if b, err := os.ReadFile(d.settingsPath()); err == nil {
 		if err := json.Unmarshal(b, &d.settings); err != nil {
